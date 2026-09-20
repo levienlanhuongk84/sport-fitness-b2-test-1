@@ -56,7 +56,8 @@
   .field { display: grid; gap: 6px; margin-bottom: 14px; }
   .field label { font: 700 13px var(--font-cond); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
   .field input { font: 16px var(--font); padding: 11px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink); width: 100%; }
-  .field input:focus, select.gap:focus, input.typ:focus, .opt:focus-within { outline: 3px solid rgba(221,90,40,.28); outline-offset: 1px; border-color: var(--orange); }
+  select.sel { font: 16px var(--font); padding: 11px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink); width: 100%; }
+  .field input:focus, select.sel:focus, select.gap:focus, input.typ:focus, .opt:focus-within { outline: 3px solid rgba(221,90,40,.28); outline-offset: 1px; border-color: var(--orange); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 600px) { .two { grid-template-columns: 1fr; } }
   .btn { appearance: none; border: 0; border-radius: 10px; padding: 12px 20px; font: 700 15px var(--font-cond); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; color: #fff; background: var(--orange); box-shadow: 0 6px 16px rgba(221,90,40,.28); transition: transform .08s ease, box-shadow .08s ease; }
@@ -99,6 +100,7 @@
   .qn { font: 700 13px/1 var(--font-mono); color: var(--purple); background: var(--purple-soft); border-radius: 8px; padding: 7px 0; text-align: center; height: 28px; align-self: start; }
   .q { margin: 3px 0 10px; font-size: 16px; }
   .q u { text-decoration: none; border-bottom: 2px solid var(--line-strong); padding-bottom: 1px; }
+  .q select.gap { margin: 0 4px; }
   .q u b { font: 700 11px var(--font-mono); color: var(--orange-ink); vertical-align: super; margin-left: 2px; }
   .q .kw { font: 700 13px var(--font-mono); color: var(--orange-ink); letter-spacing: .04em; }
   .opts { display: grid; gap: 8px; }
@@ -194,7 +196,7 @@
   <div class="wrap">
     <div class="eyebrow">Sport &amp; Fitness B2 · Vocabulary Groups 1–5</div>
     <h1>Review Test 1</h1>
-    <div class="meta"><span id="m-count">46 questions</span><span>20 minutes</span><span>1 point each</span><span>Results after you submit</span></div>
+    <div class="meta"><span id="m-count">46 questions</span><span id="m-time">20 minutes</span><span>1 point each</span><span>Results after you submit</span></div>
   </div>
 </header>
 
@@ -202,6 +204,7 @@
   <button data-tab="test" class="on">Test</button>
   <button data-tab="results" id="tab-btn-results" hidden>My results</button>
   <button data-tab="report">Class report</button>
+  <button data-tab="teacher" id="tab-btn-teacher">Teacher</button>
 </div></nav>
 
 <main><div class="wrap">
@@ -220,9 +223,10 @@
       <ul class="rules">
         <li>Groups 1–5 of the vocabulary sheet: types of sport · training verbs · people &amp; roles · places, equipment &amp; events · health benefits.</li>
         <li>Every question tests <b>use</b>, not memory: choose the word that fits the context, the correct form, or the correct collocation.</li>
-        <li>Typed answers: spelling counts; capital letters and final punctuation do not.</li>
+        <li>Every question has exactly one correct option — no typing.</li>
         <li>You can change any answer until you press <b>Submit</b>. Results and explanations appear only after submitting.</li>
       </ul>
+      <div id="closed-note" class="note-box" hidden style="margin-top:14px"></div>
       <p style="margin:18px 0 0"><button class="btn" id="btn-start">Start the test</button></p>
     </div>
 
@@ -239,6 +243,7 @@
       </div>
     </div>
 
+    <div class="card" id="reset-note" hidden><h2>Your previous attempt was cleared</h2><p class="sub">The teacher has allowed you to take the test again. Enter your name above and press Start.</p></div>
     <div class="card" id="done-card" hidden>
       <h2>You have submitted this test</h2>
       <p class="sub">Your answers are locked. Open <a href="#" data-go="results">My results</a> to review every question with its explanation, or <a href="#" data-go="report">Class report</a> to see the ranking.</p>
@@ -294,7 +299,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rank-card">
       <h2>Ranking</h2>
       <p class="sub">Sorted by score, then time taken, then submission time. Click a column header to re-sort. If a student submits more than once, only the first attempt is ranked.</p>
       <div class="tbl-wrap"><table class="tbl" id="rp-rank"><thead><tr>
@@ -305,8 +310,43 @@
     <div class="card">
       <h2>Common mistakes</h2>
       <p class="sub">Questions with the highest error rate and the wrong answer chosen most often.</p>
-      <div id="rp-lock" class="lock"><p style="margin:0 0 10px">This section shows correct answers. It unlocks after you submit the test.</p><div><input id="pin" placeholder="Teacher code" aria-label="Teacher code"><button class="btn sm" id="btn-pin">Unlock</button></div></div>
+      <div id="rp-lock" class="lock"><p style="margin:0">This section shows correct answers. It unlocks after you submit the test, or when a teacher <a href="#" data-go="teacher">signs in</a>.</p></div>
       <div id="rp-mistakes" hidden></div>
+    </div>
+  </section>
+
+  <!-- ============ TEACHER ============ -->
+  <section id="tab-teacher" hidden>
+    <div class="card" id="login-card">
+      <h2>Teacher sign-in</h2>
+      <p class="sub">Teachers can see the full class report and export results. The administrator can also open or close the test, change settings and manage submissions.</p>
+      <div class="two">
+        <div class="field"><label for="l-name">Name</label><input id="l-name" autocomplete="username" placeholder="Teacher name"></div>
+        <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password"></div>
+      </div>
+      <div class="status err" id="l-err" hidden><span class="dot"></span><span></span></div>
+      <p style="margin:10px 0 0"><button class="btn" id="btn-login">Sign in</button></p>
+    </div>
+    <div id="teacher-panel" hidden>
+      <div class="card"><div class="toolbar" style="margin:0"><div><b id="t-name"></b> <span class="chip or" id="t-role"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" href="#" data-go="report" style="text-decoration:none;display:inline-block">Class report</a><button class="btn ghost sm" id="btn-signout">Sign out</button></div></div></div>
+      <div class="card" id="admin-settings">
+        <h2>Test settings</h2>
+        <p class="sub" id="settings-hint">Changes apply to every student the next time the page loads or refreshes.</p>
+        <div class="two">
+          <div class="field"><label for="s-open">Test status</label><select id="s-open" class="sel"><option value="1">Open — students can start</option><option value="0">Closed — students cannot start</option></select></div>
+          <div class="field"><label for="s-duration">Time limit (minutes)</label><input id="s-duration" type="number" min="5" max="120" step="1"></div>
+          <div class="field"><label for="s-pass">Pass mark (out of 10)</label><input id="s-pass" type="number" min="0" max="10" step="0.5"></div>
+          <div class="field"><label for="s-rank">Ranking visible to students</label><select id="s-rank" class="sel"><option value="1">Yes — everyone sees the ranking</option><option value="0">No — teachers only</option></select></div>
+        </div>
+        <div class="field"><label for="s-msg">Message on the start page (optional)</label><input id="s-msg" maxlength="200" placeholder="e.g. Deadline: Friday 20:00"></div>
+        <div class="toolbar" style="margin:0"><div class="status" id="s-status" hidden><span class="dot"></span><span></span></div><button class="btn" id="btn-save-settings">Save settings</button></div>
+      </div>
+      <div class="card" id="admin-subs">
+        <h2>Submissions</h2>
+        <p class="sub">Every attempt, newest first. <span id="subs-admin-hint">Delete an attempt to remove it from the ranking; deleting all of a student’s attempts lets them take the test again on their device.</span></p>
+        <div class="toolbar"><div class="st" id="subs-status"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" id="btn-subs-refresh">Refresh</button><button class="btn ghost sm" id="btn-subs-csv">Download CSV</button><button class="btn sm" id="btn-clear-all" style="background:var(--bad)">Delete all results</button></div></div>
+        <div class="tbl-wrap"><table class="tbl" id="subs-tbl"><thead><tr><th>Submitted</th><th>Name</th><th>Class / ID</th><th class="num">Score</th><th class="num">Correct</th><th class="num">Time</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
     </div>
   </section>
 
@@ -320,8 +360,9 @@
 
 /* ====================== CONFIG ====================== */
 const CONFIG = {
-  API_URL: '',                 // Google Apps Script web-app URL (…/exec). Empty = save on this device only.
-  TEACHER_PIN: 'ck1-2026',     // unlocks "Common mistakes" without taking the test
+  API_URL: '',                 // Google Apps Script web-app URL (…/exec). Empty = this device only.
+  // Accounts used ONLY while API_URL is empty (offline mode). When connected, accounts live in Code.gs.
+  LOCAL_USERS: [{ name: 'Lê Viên Lan Hương', password: 'ck1-2026', role: 'admin' }],
   DURATION_MIN: 20,
   PASS_MARK: 5,
   KEY: 'sfb2-rt1'              // localStorage namespace; change to reset every device
@@ -366,14 +407,14 @@ const PARTS = [
     { id: '3.8', q: 'I am ___ hard for a 10 km race in December.', opts: ['training', 'competing', 'working', 'pushing'], a: 0, g: 2, exp: 'train (hard) for an event = prepare your body for it. You compete IN a race on the day itself.' }
   ] },
 
-{ id: 'P4', title: 'People & roles', focus: 'Who is it?', kind: 'typ',
-  instr: 'Type the missing word. The first letter is given.',
+{ id: 'P4', title: 'People & roles', focus: 'Who is it?', kind: 'mcq',
+  instr: 'Choose the correct person.',
   items: [
-    { id: '4.1', q: 'At the tennis final, the <span class="kw">u_____</span> called the ball out.', a: ['umpire'], g: 3, exp: 'Tennis has an umpire; football has a referee.' },
-    { id: '4.2', q: 'A major bank is the team’s <span class="kw">s______</span> — it pays money to support them.', a: ['sponsor'], g: 3, exp: 'sponsor = a company that pays money to support a team or event.' },
-    { id: '4.3', q: 'Before I started running I was a real <span class="kw">c____ p_____</span>: I sat all day and did almost no exercise.', a: ['couch potato'], g: 3, exp: 'couch potato (informal) = a person who sits a lot and does little exercise.' },
-    { id: '4.4', q: 'After his knee injury, the <span class="kw">p_____</span> used exercise and massage to get him back on the pitch.', a: ['physiotherapist', 'physio'], g: 3, exp: 'physiotherapist (physio) = treats injuries with exercise and massage. A sports doctor examines and diagnoses.' },
-    { id: '4.5', q: 'She played at amateur level until she was 19, then she <span class="kw">t_____</span> professional.', a: ['turned'], g: 3, exp: 'turn professional = start doing a sport as a paid job.' }
+    { id: '4.1', q: 'At the tennis final, the ___ called the ball out.', opts: ['umpire', 'referee', 'coach', 'captain'], a: 0, g: 3, exp: 'Tennis has an umpire; football has a referee.' },
+    { id: '4.2', q: 'A major bank is the team’s ___ — it pays money to support them.', opts: ['sponsor', 'supporter', 'spectator', 'rival'], a: 0, g: 3, exp: 'sponsor = a company that pays money to support a team. A supporter is a fan who follows the team.' },
+    { id: '4.3', q: 'Before I started running I was a real ___: I sat all day and did almost no exercise.', opts: ['couch potato', 'role model', 'keen runner', 'amateur'], a: 0, g: 3, exp: 'couch potato (informal) = a person who sits a lot and does little exercise.' },
+    { id: '4.4', q: 'After his knee injury, the ___ used exercise and massage to get him back on the pitch.', opts: ['physiotherapist', 'sports doctor', 'personal trainer', 'referee'], a: 0, g: 3, exp: 'physiotherapist (physio) = treats injuries with exercise and massage. A sports doctor examines and diagnoses.' },
+    { id: '4.5', q: 'She played at amateur level until she was 19, then she ___ professional.', opts: ['turned', 'took', 'made', 'got'], a: 0, g: 3, exp: 'turn professional = start doing a sport as a paid job.' }
   ] },
 
 { id: 'P5', title: 'Places, equipment & events', focus: 'Meaning in context', kind: 'mcq',
@@ -388,15 +429,15 @@ const PARTS = [
   ] },
 
 { id: 'P6', title: 'Health benefits', focus: 'Word form & collocation', kind: 'mix',
-  instr: 'Complete the doctor’s leaflet. Type the correct form of the word in brackets, or choose the best option.',
+  instr: 'Complete the doctor’s leaflet: choose the correct form of the word, or the best option.',
   items: [
-    { id: '6.1', k: 'typ', q: 'Regular exercise ___ <span class="kw">(reduce)</span> the risk of heart disease and type 2 diabetes.', a: ['reduces'], g: 5, exp: '“Regular exercise” is singular → reduces. Collocation: reduce the risk OF.' },
-    { id: '6.2', k: 'typ', q: 'Yoga improves ___ <span class="kw">(flexible)</span> and strengthens muscles and bones.', a: ['flexibility'], g: 5, exp: 'improve + noun → flexibility. flexible is the adjective.' },
+    { id: '6.1', k: 'sel', q: 'Regular exercise ___ the risk of heart disease and type 2 diabetes.', opts: ['reduces', 'reduce', 'reducing', 'reduction'], a: 0, g: 5, exp: '“Regular exercise” is singular → reduces. Collocation: reduce the risk OF.' },
+    { id: '6.2', k: 'sel', q: 'Yoga improves ___ and strengthens muscles and bones.', opts: ['flexibility', 'flexible', 'flexibly', 'flexing'], a: 0, g: 5, exp: 'improve + noun → flexibility. flexible is the adjective.' },
     { id: '6.3', k: 'mcq', q: 'Exercise releases ___ — chemicals in the brain that make you feel good.', opts: ['endorphins', 'calories', 'vitamins', 'muscles'], a: 0, g: 5, exp: 'release endorphins → improve mood. Calories are burned, not released.' },
     { id: '6.4', k: 'mcq', q: 'A ___ lifestyle — sitting for long hours with little movement — is a major risk factor.', opts: ['sedentary', 'vigorous', 'moderate', 'aerobic'], a: 0, g: 5, exp: 'sedentary = much sitting, little exercise. vigorous / moderate / aerobic describe exercise, not a lifestyle.' },
-    { id: '6.5', k: 'mcq', q: 'Walking is beneficial ___ your heart.', opts: ['to', 'with', 'at', 'about'], a: 0, g: 5, exp: 'be beneficial TO (or FOR) something. Never “with”.' },
+    { id: '6.5', k: 'sel', q: 'Walking is beneficial ___ your heart.', opts: ['to', 'with', 'at', 'about'], a: 0, g: 5, exp: 'be beneficial TO (or FOR) something. Never “with”.' },
     { id: '6.6', k: 'mcq', q: 'The WHO recommends at least ___ minutes of moderate activity a week.', opts: ['150', '30', '60', '300'], a: 0, g: 5, exp: 'WHO: at least 150 minutes of moderate activity a week — about 30 minutes, five days a week.' },
-    { id: '6.7', k: 'typ', q: 'Finishing a race gives you a real sense of ___ <span class="kw">(achieve)</span>.', a: ['achievement'], g: 5, exp: 'a sense of achievement = the good feeling of having done something difficult. achieve is the verb.' }
+    { id: '6.7', k: 'sel', q: 'Finishing a race gives you a real sense of ___.', opts: ['achievement', 'achieve', 'achieving', 'achieved'], a: 0, g: 5, exp: 'a sense of achievement = the good feeling of having done something difficult. achieve is the verb.' }
   ] },
 
 { id: 'P7', title: 'Find the mistake', focus: 'Accuracy', kind: 'err',
@@ -409,14 +450,14 @@ const PARTS = [
     { id: '7.5', q: 'He {A gave up football} after his injury, but he {B keeps fit by} {C doing cycling} to work.', a: 2, g: 1, exp: 'cycling to work / going cycling — never “do cycling”. do is for athletics, gymnastics, yoga, martial arts.' }
   ] },
 
-{ id: 'P8', title: 'Say it the B2 way', focus: 'Paraphrase with a key word', kind: 'typ',
-  instr: 'Complete the second sentence so that it means the same as the first. Use the word in CAPITALS. Type 2–4 words.',
+{ id: 'P8', title: 'Say it the B2 way', focus: 'Paraphrase', kind: 'mcq',
+  instr: 'Choose the option that completes the second sentence so that it means the same as the first.',
   items: [
-    { id: '8.1', q: 'Our team got to the last match of the tournament. <span class="kw">REACH</span><br>→ Our team ___ of the tournament.', a: ['reached the final', 'has reached the final', 'have reached the final'], g: 4, exp: 'reach the final = get to the last match, which decides the winner.' },
-    { id: '8.2', q: 'Vietnam came first in swimming. <span class="kw">GOLD</span><br>→ Vietnam ___ in swimming.', a: ['won a gold medal', 'won the gold medal', 'won gold', 'has won a gold medal', 'won a gold'], g: 4, exp: 'win a gold medal = come first. Silver = second, bronze = third.' },
-    { id: '8.3', q: 'Exercise is extremely good for your health. <span class="kw">WONDERS</span><br>→ Exercise ___ your health.', a: ['does wonders for', 'can do wonders for', 'will do wonders for', 'really does wonders for'], g: 5, exp: 'do wonders for = be extremely good for. Note the preposition: for.' },
-    { id: '8.4', q: 'I could not breathe normally after the race. <span class="kw">BREATH</span><br>→ I was ___ after the race.', a: ['out of breath', 'completely out of breath', 'totally out of breath', 'really out of breath'], g: 2, exp: 'be out of breath = breathing fast after hard exercise. Then you stop to catch your breath.' },
-    { id: '8.5', q: 'Doing sport helps you feel less stressed. <span class="kw">RELIEVE</span><br>→ Doing sport helps you ___.', a: ['relieve stress', 'to relieve stress', 'relieve your stress', 'relieve the stress'], g: 5, exp: 'relieve stress = make you feel less worried and tense. Also: reduce stress.' }
+    { id: '8.1', q: 'Our team got to the last match of the tournament.<br>→ Our team ___ of the tournament.', opts: ['reached the final', 'reached to the final', 'arrived the final', 'reached at the final'], a: 0, g: 4, exp: 'reach the final — reach takes a direct object, no preposition.' },
+    { id: '8.2', q: 'Vietnam came first in swimming.<br>→ Vietnam ___ in swimming.', opts: ['won a gold medal', 'won a golden medal', 'earned a gold prize', 'made a gold medal'], a: 0, g: 4, exp: 'win a gold medal = come first. The adjective is gold, not golden; medals are won, not made.' },
+    { id: '8.3', q: 'Exercise is extremely good for your health.<br>→ Exercise ___ your health.', opts: ['does wonders for', 'does wonders to', 'makes wonders for', 'is wonders for'], a: 0, g: 5, exp: 'do wonders FOR = be extremely good for. Verb do, preposition for.' },
+    { id: '8.4', q: 'I could not breathe normally after the race.<br>→ I was ___ after the race.', opts: ['out of breath', 'out of breathe', 'without breath', 'off breath'], a: 0, g: 2, exp: 'be out of breath — the noun is breath; breathe is the verb. Then you stop to catch your breath.' },
+    { id: '8.5', q: 'Doing sport helps you feel less stressed.<br>→ Doing sport helps you ___.', opts: ['relieve stress', 'relief stress', 'relieve from stress', 'relieving of stress'], a: 0, g: 5, exp: 'relieve stress — relieve is the verb, relief the noun; no preposition. Also: reduce stress.' }
   ] }
 ];
 const GROUPS = { 1: 'G1 · Types of sport', 2: 'G2 · Training verbs', 3: 'G3 · People & roles', 4: 'G4 · Places & events', 5: 'G5 · Health benefits' };
@@ -433,97 +474,133 @@ const TOTAL = ITEMS.length;
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const strip = h => String(h).replace(/<[^>]+>/g, '').replace(/\{([A-C]) ([^}]*)\}/g, '$2');
+const strip = h => String(h).replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, '').replace(/\{([A-C]) ([^}]*)\}/g, '$2');
 const norm = s => String(s || '').toLowerCase().replace(/[’‘`´]/g, "'").replace(/[-–—]/g, ' ').replace(/[.,!?;:"]+$/g, '').replace(/\s+/g, ' ').trim();
 const pad = n => String(n).padStart(2, '0');
 const mmss = s => pad(Math.floor(s / 60)) + ':' + pad(Math.floor(s % 60));
 const fmtDate = x => { const d = new Date(x); return isNaN(d) ? '—' : pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 const uuid = () => 'xxxxxxxxyxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
-const ITEM = Object.fromEntries(ITEMS.map(it => [it.id, it]));
-const PART = Object.fromEntries(PARTS.map(p => [p.id, p]));
+const store = { get(k, d) { try { const v = JSON.parse(localStorage.getItem(CONFIG.KEY + ':' + k)); return v === null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(CONFIG.KEY + ':' + k, JSON.stringify(v)); } catch (e) {} }, del(k) { try { localStorage.removeItem(CONFIG.KEY + ':' + k); } catch (e) {} } };
 
-let S = load() || { status: 'idle', name: '', sid: '', startedAt: 0, answers: {}, order: {}, result: null, clientId: uuid(), pending: null };
-function load() { try { return JSON.parse(localStorage.getItem(CONFIG.KEY + ':state')); } catch (e) { return null; } }
-function save() { try { localStorage.setItem(CONFIG.KEY + ':state', JSON.stringify(S)); } catch (e) {} }
+const DEFAULT_SET = { open: true, duration: CONFIG.DURATION_MIN, passMark: CONFIG.PASS_MARK, showRanking: true, message: '' };
+let SET = Object.assign({}, DEFAULT_SET, store.get('settings', {}));
+let S = store.get('state') || { status: 'idle', name: '', sid: '', startedAt: 0, duration: SET.duration, answers: {}, order: {}, result: null, clientId: uuid(), pending: null };
+function save() { store.set('state', S); }
+let A = null; try { A = JSON.parse(sessionStorage.getItem(CONFIG.KEY + ':auth')); } catch (e) {}
+const isStaff = () => !!A, isAdmin = () => !!A && A.role === 'admin';
 
 function keyText(it) { return it.kind === 'err' ? 'ABC'[it.a] : it.opts[it.a]; }
-function keyLabel(it) { if (it.kind === 'typ') return it.a[0]; if (it.kind === 'err') return 'ABC'[it.a] + ' → ' + segs(it)[it.a].fix; return it.opts[it.a]; }
-function segs(it) { const out = []; it.q.replace(/\{([A-C]) ([^}]*)\}/g, (m, L, t) => { out.push({ L, t, fix: '' }); }); return out; }
-function isRight(it, given) {
-  if (it.kind === 'typ') { const g = norm(given); return g !== '' && it.a.some(x => norm(x) === g); }
-  return given !== '' && given === keyText(it);
-}
+function keyLabel(it) { if (it.kind === 'err') return 'ABC'[it.a] + ' · ' + segs(it)[it.a].t; return it.opts[it.a]; }
+function segs(it) { const out = []; it.q.replace(/\{([A-C]) ([^}]*)\}/g, (m, L, t) => { out.push({ L, t }); }); return out; }
+function isRight(it, given) { return given !== '' && given === keyText(it); }
 function optionOrder(it) {
-  if (it.kind === 'typ' || it.kind === 'err' || it.part === 'P1') return it.opts ? it.opts.map((_, i) => i) : [];
+  if (it.kind === 'err' || it.part === 'P1') return it.opts.map((_, i) => i);
   if (!S.order[it.id]) { const idx = it.opts.map((_, i) => i); for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; } S.order[it.id] = idx; save(); }
   return S.order[it.id];
+}
+
+/* ====================== API (server or this device) ====================== */
+async function api(action, payload) {
+  payload = payload || {};
+  if (!CONFIG.API_URL) return localApi(action, payload);
+  const auth = A ? { user: A.name, password: A.password } : {};
+  if (action === 'list' || action === 'settings') {
+    const res = await fetch(CONFIG.API_URL + '?action=' + action + '&_=' + Date.now(), { redirect: 'follow' });
+    return res.json();
+  }
+  const res = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(Object.assign({ action }, payload, auth)), redirect: 'follow' });
+  return res.json();
+}
+function localApi(action, p) {
+  const rows = store.get('local', []);
+  const admin = () => { const u = CONFIG.LOCAL_USERS.find(u => u.name === (A && A.name) && u.password === (A && A.password)); return u && u.role === 'admin'; };
+  switch (action) {
+    case 'list': return { ok: true, rows, settings: SET };
+    case 'settings': return { ok: true, settings: SET };
+    case 'submit': if (!rows.some(x => x.clientId === p.clientId && x.submittedAt === p.submittedAt)) { rows.push(p); store.set('local', rows); } return { ok: true };
+    case 'login': { const u = CONFIG.LOCAL_USERS.find(u => norm(u.name) === norm(p.user) && u.password === p.password); return u ? { ok: true, name: u.name, role: u.role, settings: SET } : { ok: false, error: 'wrong name or password' }; }
+    case 'save_settings': if (!admin()) return { ok: false, error: 'admin only' }; SET = Object.assign({}, SET, p.settings); store.set('settings', SET); return { ok: true, settings: SET };
+    case 'delete': if (!admin()) return { ok: false, error: 'admin only' }; store.set('local', rows.filter(x => !(x.clientId === p.clientId && x.submittedAt === p.submittedAt))); return { ok: true };
+    case 'delete_student': if (!admin()) return { ok: false, error: 'admin only' }; store.set('local', rows.filter(x => !(norm(x.name) === norm(p.name) && norm(x.sid) === norm(p.sid)))); return { ok: true };
+    case 'clear': if (!admin()) return { ok: false, error: 'admin only' }; store.set('local', []); return { ok: true };
+  }
+  return { ok: false, error: 'unknown action' };
 }
 
 /* ====================== TABS ====================== */
 function showTab(name) {
   $$('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
-  ['test', 'results', 'report'].forEach(t => { $('#tab-' + t).hidden = t !== name; });
+  ['test', 'results', 'report', 'teacher'].forEach(t => { $('#tab-' + t).hidden = t !== name; });
   if (name === 'report') loadReport();
+  if (name === 'teacher') renderTeacher();
   window.scrollTo({ top: 0 });
 }
 $$('nav.tabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 document.addEventListener('click', e => { const a = e.target.closest('[data-go]'); if (a) { e.preventDefault(); showTab(a.dataset.go); } });
 
+/* ====================== SETTINGS ====================== */
+function applySettings() {
+  $('#m-time').textContent = SET.duration + ' minutes';
+  const closed = !SET.open;
+  $('#btn-start').disabled = closed;
+  const note = $('#closed-note');
+  const msg = (closed ? 'The test is currently closed. ' : '') + (SET.message || '');
+  note.hidden = !msg.trim(); note.textContent = msg.trim();
+  $('#rank-card').hidden = !(SET.showRanking || isStaff());
+}
+async function refreshSettings() {
+  try { const j = await api('settings'); if (j.ok && j.settings) { SET = Object.assign({}, DEFAULT_SET, j.settings); store.set('settings', SET); applySettings(); } } catch (e) {}
+}
+
 /* ====================== START ====================== */
 $('#map-body').innerHTML = PARTS.map(p => `<tr><td>${p.id}</td><td>${esc(p.title)}</td><td>${esc(p.focus)}</td><td>${p.items.length}</td></tr>`).join('');
 $('#m-count').textContent = TOTAL + ' questions'; $('#total').textContent = TOTAL;
-$('#btn-start').addEventListener('click', () => {
+$('#btn-start').addEventListener('click', async () => {
   const name = $('#f-name').value.trim(), sid = $('#f-sid').value.trim();
   if (name.length < 2) { $('#f-name').focus(); $('#f-name').style.borderColor = 'var(--bad)'; return; }
-  S = Object.assign(S, { status: 'running', name, sid, startedAt: Date.now(), answers: {}, order: {}, result: null });
+  await refreshSettings();
+  if (!SET.open) return;
+  S = Object.assign(S, { status: 'running', name, sid, startedAt: Date.now(), duration: SET.duration, answers: {}, order: {}, result: null });
   save(); renderQuiz(); startTimer();
 });
 
 /* ====================== RENDER TEST ====================== */
+function selectHtml(it) {
+  const ord = optionOrder(it);
+  return `<select class="gap" data-id="${it.id}" aria-label="Question ${it.id}"><option value="">— choose —</option>${ord.map(i => `<option value="${esc(it.opts[i])}">${esc(it.opts[i])}</option>`).join('')}</select>`;
+}
 function renderQuiz() {
-  $('#start-card').hidden = true; $('#done-card').hidden = true; $('#quiz').hidden = false;
+  $('#start-card').hidden = true; $('#done-card').hidden = true; $('#reset-note').hidden = true; $('#quiz').hidden = false;
   $('#who').textContent = S.name + (S.sid ? ' · ' + S.sid : '');
-  let n = 0;
   $('#parts').innerHTML = PARTS.map(p => {
     const head = `<div class="part-head"><div class="eyebrow">Part ${p.id.slice(1)} · ${p.items.length} question${p.items.length > 1 ? 's' : ''} · ${esc(p.focus)}</div><h2>${esc(p.title)}</h2><p class="instr">${esc(p.instr)}</p></div>`;
-    let body;
-    if (p.kind === 'cloze') {
-      body = '<div class="cloze">' + esc(p.text).replace(/\{(\d+)\}/g, (m, k) => {
-        const it = p.items[k - 1]; n++;
-        const ord = optionOrder(it);
-        return `<span class="gw"><span class="gapnum">${it.id}</span><select class="gap" data-id="${it.id}" aria-label="Gap ${it.id}"><option value="">— choose —</option>${ord.map(i => `<option value="${esc(it.opts[i])}">${esc(it.opts[i])}</option>`).join('')}</select></span>`;
-      }) + '</div>';
-    } else {
-      body = '<div class="items">' + p.items.map(it => { n++; return renderItem(it); }).join('') + '</div>';
-    }
+    const body = p.kind === 'cloze'
+      ? '<div class="cloze">' + esc(p.text).replace(/\{(\d+)\}/g, (m, k) => { const it = p.items[k - 1]; return `<span class="gw"><span class="gapnum">${it.id}</span>${selectHtml(it)}</span>`; }) + '</div>'
+      : '<div class="items">' + p.items.map(renderItem).join('') + '</div>';
     return `<section class="card part" id="part-${p.id}">${head}${body}</section>`;
   }).join('');
-  // restore answers
-  ITEMS.forEach(it => { const v = S.answers[it.id]; if (v === undefined) return; const el = $(`[data-id="${it.id}"]`); if (!el) return;
-    if (it.kind === 'sel') { el.value = v; el.classList.toggle('done', v !== ''); }
-    else if (it.kind === 'typ') el.value = v;
+  ITEMS.forEach(it => { const v = S.answers[it.id]; if (v === undefined) return;
+    if (it.kind === 'sel') { const el = $(`select[data-id="${it.id}"]`); if (el) { el.value = v; el.classList.toggle('done', v !== ''); } }
     else { const r = $(`input[name="q${it.id.replace('.', '-')}"][value="${esc(v)}"]`); if (r) { r.checked = true; r.closest('.opt').classList.add('sel'); } }
   });
-  $('#parts').addEventListener('change', onAnswer); $('#parts').addEventListener('input', onAnswer);
+  $('#parts').addEventListener('change', onAnswer);
   updateCount();
 }
 function renderItem(it) {
   let q = it.q, control = '';
-  if (it.kind === 'typ') control = `<input class="typ" data-id="${it.id}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type your answer" aria-label="Answer ${it.id}">`;
+  if (it.kind === 'sel') { q = it.q.replace('___', selectHtml(it)); }
   else if (it.kind === 'err') {
-    const sg = segs(it);
     q = q.replace(/\{([A-C]) ([^}]*)\}/g, (m, L, t) => `<u>${esc(t)}<b>${L}</b></u>`);
-    control = `<div class="opts">${sg.map((s, i) => `<label class="opt"><input type="radio" name="q${it.id.replace('.', '-')}" value="${'ABC'[i]}"><span class="letter">${'ABC'[i]}</span><span>${esc(s.t)}</span></label>`).join('')}</div>`;
+    control = `<div class="opts">${segs(it).map((s, i) => `<label class="opt"><input type="radio" name="q${it.id.replace('.', '-')}" value="${'ABC'[i]}"><span class="letter">${'ABC'[i]}</span><span>${esc(s.t)}</span></label>`).join('')}</div>`;
   } else {
     const ord = optionOrder(it); const long = it.opts.some(o => o.length > 22);
     control = `<div class="opts${long ? '' : ' two-col'}">${ord.map((i, k) => `<label class="opt"><input type="radio" name="q${it.id.replace('.', '-')}" value="${esc(it.opts[i])}"><span class="letter">${'ABCD'[k]}</span><span>${esc(it.opts[i])}</span></label>`).join('')}</div>`;
   }
-  return `<div class="item" data-item="${it.id}"><div class="qn">${it.id}</div><div><p class="q">${it.kind === 'err' ? q : it.q}</p>${control}</div></div>`;
+  return `<div class="item" data-item="${it.id}"><div class="qn">${it.id}</div><div><p class="q">${q}</p>${control}</div></div>`;
 }
 function onAnswer(e) {
   const el = e.target; if (!el) return;
   if (el.matches('select.gap')) { S.answers[el.dataset.id] = el.value; el.classList.toggle('done', el.value !== ''); }
-  else if (el.matches('input.typ')) { S.answers[el.dataset.id] = el.value; }
   else if (el.matches('input[type=radio]')) { const id = el.name.slice(1).replace('-', '.'); S.answers[id] = el.value; $$(`input[name="${el.name}"]`).forEach(r => r.closest('.opt').classList.toggle('sel', r.checked)); }
   else return;
   save(); updateCount();
@@ -536,10 +613,11 @@ function updateCount() {
 
 /* ====================== TIMER ====================== */
 let tick = null;
+const durationSec = () => (S.duration || CONFIG.DURATION_MIN) * 60;
 function startTimer() {
   clearInterval(tick);
   const run = () => {
-    const left = Math.max(0, CONFIG.DURATION_MIN * 60 - Math.floor((Date.now() - S.startedAt) / 1000));
+    const left = Math.max(0, durationSec() - Math.floor((Date.now() - S.startedAt) / 1000));
     const t = $('#timer'); t.textContent = mmss(left);
     t.className = 'time' + (left <= 60 ? ' danger' : left <= 180 ? ' warn' : '');
     if (left <= 0) { clearInterval(tick); submit(true); }
@@ -548,15 +626,15 @@ function startTimer() {
 }
 
 /* ====================== SUBMIT & GRADE ====================== */
-$('#btn-submit').addEventListener('click', () => submit(false));
-$('#btn-submit-top').addEventListener('click', () => submit(false));
-function ask(msg) {
+function ask(msg, okLabel) {
   return new Promise(res => {
-    const m = $('#modal'); $('#modal-msg').textContent = msg; m.hidden = false;
+    const m = $('#modal'); $('#modal-msg').textContent = msg; $('#modal-ok').textContent = okLabel || 'Submit'; m.hidden = false;
     const done = v => { m.hidden = true; $('#modal-ok').onclick = $('#modal-cancel').onclick = null; res(v); };
     $('#modal-ok').onclick = () => done(true); $('#modal-cancel').onclick = () => done(false); $('#modal-ok').focus();
   });
 }
+$('#btn-submit').addEventListener('click', () => submit(false));
+$('#btn-submit-top').addEventListener('click', () => submit(false));
 async function submit(auto) {
   if (S.status !== 'running') return;
   const left = TOTAL - answeredCount();
@@ -569,30 +647,30 @@ async function submit(auto) {
   const rows = ITEMS.map(it => { const a = (S.answers[it.id] || '').trim(); return { id: it.id, a, ok: isRight(it, a) }; });
   const correct = rows.filter(r => r.ok).length;
   S.result = { name: S.name, sid: S.sid, score10: Math.round(correct / TOTAL * 100) / 10, correct, total: TOTAL,
-    timeSec: Math.min(CONFIG.DURATION_MIN * 60, Math.round((now - S.startedAt) / 1000)), startedAt: new Date(S.startedAt).toISOString(),
+    timeSec: Math.min(durationSec(), Math.round((now - S.startedAt) / 1000)), startedAt: new Date(S.startedAt).toISOString(),
     submittedAt: new Date(now).toISOString(), clientId: S.clientId, auto: !!auto, answers: rows };
   S.status = 'done'; S.pending = S.result; save();
   renderResults(); showTab('results'); lockTest(); send();
 }
-function lockTest() { $('#quiz').hidden = true; $('#start-card').hidden = true; $('#done-card').hidden = false; $('#tab-btn-results').hidden = false; }
+function lockTest() { $('#quiz').hidden = true; $('#start-card').hidden = true; $('#reset-note').hidden = true; $('#done-card').hidden = false; $('#tab-btn-results').hidden = false; }
+function resetForRetake() {
+  S = { status: 'idle', name: S.name, sid: S.sid, startedAt: 0, duration: SET.duration, answers: {}, order: {}, result: null, clientId: uuid(), pending: null }; save();
+  $('#done-card').hidden = true; $('#quiz').hidden = true; $('#tab-btn-results').hidden = true; $('#start-card').hidden = false; $('#reset-note').hidden = false;
+  $('#f-name').value = S.name || ''; $('#f-sid').value = S.sid || '';
+}
 
 async function send() {
   const st = $('#r-status'); const r = S.pending; if (!r) return;
-  if (!CONFIG.API_URL) {
-    const rows = localRows(); if (!rows.some(x => x.clientId === r.clientId && x.submittedAt === r.submittedAt)) { rows.push(r); try { localStorage.setItem(CONFIG.KEY + ':local', JSON.stringify(rows)); } catch (e) {} }
-    S.pending = null; save(); st.className = 'status ok'; st.innerHTML = '<span class="dot"></span><span>Saved on this device. The class sheet is not connected yet.</span>'; return;
-  }
   st.className = 'status'; st.innerHTML = '<span class="dot"></span><span>Saving to the class sheet…</span>';
   try {
-    const res = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(r), redirect: 'follow' });
-    const j = await res.json(); if (!j.ok) throw new Error(j.error || 'rejected');
-    S.pending = null; save(); st.className = 'status ok'; st.innerHTML = '<span class="dot"></span><span>Saved to the class sheet. See the <a href="#" data-go="report">class report</a>.</span>';
+    const j = await api('submit', r); if (!j.ok) throw new Error(j.error || 'rejected');
+    S.pending = null; save(); st.className = 'status ok';
+    st.innerHTML = '<span class="dot"></span><span>' + (CONFIG.API_URL ? 'Saved to the class sheet. See the <a href="#" data-go="report">class report</a>.' : 'Saved on this device. The class sheet is not connected yet.') + '</span>';
   } catch (e) {
     st.className = 'status err'; st.innerHTML = '<span class="dot"></span><span>Could not reach the class sheet — your result is kept on this device and will be sent when you reopen this page. </span><button class="btn ghost sm" id="btn-retry">Retry now</button>';
     $('#btn-retry').addEventListener('click', send);
   }
 }
-function localRows() { try { return JSON.parse(localStorage.getItem(CONFIG.KEY + ':local')) || []; } catch (e) { return []; } }
 
 /* ====================== RESULTS ====================== */
 function renderResults() {
@@ -600,10 +678,9 @@ function renderResults() {
   $('#r-score').innerHTML = r.score10.toFixed(1) + '<small> / 10</small>';
   $('#r-correct').textContent = r.correct + ' / ' + r.total; $('#r-time').textContent = mmss(r.timeSec); $('#r-when').textContent = fmtDate(r.submittedAt) + (r.auto ? ' · time up' : '');
   const okById = Object.fromEntries(r.answers.map(a => [a.id, a]));
-  $('#r-parts').innerHTML = PARTS.map(p => { const c = p.items.filter(it => okById[it.id].ok).length; const pct = c / p.items.length * 100; return bar(`${p.id} · ${p.title}`, pct, `${c}/${p.items.length}`); }).join('');
-  const rev = $('#r-review');
-  rev.innerHTML = PARTS.map(p => `<h3>Part ${p.id.slice(1)} · ${esc(p.title)}</h3>` + p.items.map(it => {
-    const a = okById[it.id]; const given = a.a === '' ? '<i>no answer</i>' : esc(it.kind === 'err' ? a.a + ' · ' + segs(it)['ABC'.indexOf(a.a)]?.t : a.a);
+  $('#r-parts').innerHTML = PARTS.map(p => { const c = p.items.filter(it => okById[it.id].ok).length; return bar(`${p.id} · ${p.title}`, c / p.items.length * 100, `${c}/${p.items.length}`); }).join('');
+  $('#r-review').innerHTML = PARTS.map(p => `<h3>Part ${p.id.slice(1)} · ${esc(p.title)}</h3>` + p.items.map(it => {
+    const a = okById[it.id]; const given = a.a === '' ? '<i>no answer</i>' : esc(it.kind === 'err' ? a.a + ' · ' + (segs(it)['ABC'.indexOf(a.a)] || {}).t : a.a);
     return `<div class="item ${a.ok ? 'ok' : 'wrong'}"><div class="mark ${a.ok ? 'ok' : 'no'}">${a.ok ? '✓' : '✗'}</div><div>
       <p class="q"><span class="chip mu" style="margin-right:6px">${it.id}</span>${it.kind === 'err' ? it.q.replace(/\{([A-C]) ([^}]*)\}/g, (m, L, t) => `<u>${esc(t)}<b>${L}</b></u>`) : it.q}</p>
       <div class="ans"><span class="you ${a.ok ? 'ok' : ''}">Your answer: ${given}</span>${a.ok ? '' : `<span class="key">Correct: ${esc(keyLabel(it))}</span>`}</div>
@@ -614,25 +691,24 @@ function renderResults() {
 function bar(label, pct, val, low) { return `<div class="bar"><div class="n" title="${esc(label)}">${esc(label)}</div><div class="t"><div class="f${(low !== undefined ? low : pct < 50) ? ' low' : ''}" style="width:${pct.toFixed(1)}%"></div></div><div class="v">${val}</div></div>`; }
 
 /* ====================== REPORT ====================== */
-let rpTimer = null, RANK = [], sortKey = 'rank', sortDir = 1;
-async function fetchRows() {
-  if (!CONFIG.API_URL) return { rows: localRows(), local: true };
-  const res = await fetch(CONFIG.API_URL + '?action=list&_=' + Date.now(), { redirect: 'follow' });
-  const j = await res.json(); if (!j.ok) throw new Error(j.error || 'error'); return { rows: j.rows || [], local: false };
-}
+let rpTimer = null, RANK = [], RAW = [], sortKey = 'rank', sortDir = 1;
 async function loadReport() {
   clearInterval(rpTimer); const st = $('#rp-status'); st.textContent = 'Loading…';
   try {
-    const { rows, local } = await fetchRows();
-    $('#rp-note').hidden = !local; if (local) $('#rp-note').textContent = 'The class sheet is not connected yet: this report shows only submissions saved on this device.';
+    const j = await api('list'); if (!j.ok) throw new Error(j.error || 'error');
+    if (j.settings) { SET = Object.assign({}, DEFAULT_SET, j.settings); store.set('settings', SET); applySettings(); }
+    const rows = j.rows || []; RAW = rows;
+    $('#rp-note').hidden = !!CONFIG.API_URL; if (!CONFIG.API_URL) $('#rp-note').textContent = 'The class sheet is not connected yet: this report shows only submissions saved on this device.';
     renderReport(rows); st.textContent = `${rows.length} submission${rows.length === 1 ? '' : 's'} · updated ${new Date().toLocaleTimeString('en-GB')}`;
   } catch (e) { st.textContent = 'Could not load the class sheet. Check your connection and refresh.'; }
   rpTimer = setInterval(() => { if (!$('#tab-report').hidden && document.visibilityState === 'visible') loadReport(); }, 45000);
 }
 $('#btn-refresh').addEventListener('click', loadReport);
+function cleanRows(rows) {
+  return rows.map(r => ({ ...r, score10: +r.score10 || 0, correct: +r.correct || 0, total: +r.total || TOTAL, timeSec: +r.timeSec || 0, answers: Array.isArray(r.answers) ? r.answers : [] })).filter(r => r.name);
+}
 function dedupe(rows) {
-  const clean = rows.map(r => ({ ...r, score10: +r.score10 || 0, correct: +r.correct || 0, total: +r.total || TOTAL, timeSec: +r.timeSec || 0, submittedAt: r.submittedAt, answers: Array.isArray(r.answers) ? r.answers : [] }))
-    .filter(r => r.name).sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt));
+  const clean = cleanRows(rows).sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt));
   const seen = new Map();
   clean.forEach(r => { const k = norm(r.name) + '|' + norm(r.sid); if (seen.has(k)) seen.get(k).attempts++; else seen.set(k, { ...r, attempts: 1 }); });
   return Array.from(seen.values());
@@ -641,28 +717,25 @@ function renderReport(rows) {
   const R = dedupe(rows);
   R.sort((a, b) => b.score10 - a.score10 || a.timeSec - b.timeSec || new Date(a.submittedAt) - new Date(b.submittedAt));
   R.forEach((r, i) => r.rank = i + 1); RANK = R;
-  const n = R.length, scores = R.map(r => r.score10).sort((a, b) => a - b);
+  const n = R.length, scores = R.map(r => r.score10).sort((a, b) => a - b), PM = +SET.passMark;
   const mean = n ? scores.reduce((s, x) => s + x, 0) / n : 0, median = n ? (n % 2 ? scores[(n - 1) / 2] : (scores[n / 2 - 1] + scores[n / 2]) / 2) : 0;
-  const pass = n ? R.filter(r => r.score10 >= CONFIG.PASS_MARK).length : 0, tmean = n ? R.reduce((s, r) => s + r.timeSec, 0) / n : 0;
+  const pass = n ? R.filter(r => r.score10 >= PM).length : 0, tmean = n ? R.reduce((s, r) => s + r.timeSec, 0) / n : 0;
   $('#rp-kpis').innerHTML = [
     ['Students', n, rows.length > n ? (rows.length - n) + ' repeat attempt' + (rows.length - n > 1 ? 's' : '') + ' hidden' : 'first attempts'],
     ['Average score', n ? mean.toFixed(1) : '—', 'out of 10'],
     ['Median', n ? median.toFixed(1) : '—', n ? `range ${scores[0].toFixed(1)}–${scores[n - 1].toFixed(1)}` : ''],
-    ['Reached ' + CONFIG.PASS_MARK.toFixed(1), n ? Math.round(pass / n * 100) + '%' : '—', `${pass} of ${n}`],
-    ['Average time', n ? mmss(tmean) : '—', 'of ' + CONFIG.DURATION_MIN + ' minutes']
+    ['Reached ' + PM.toFixed(1), n ? Math.round(pass / n * 100) + '%' : '—', `${pass} of ${n}`],
+    ['Average time', n ? mmss(tmean) : '—', 'of ' + SET.duration + ' minutes']
   ].map(k => `<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
-  // distribution
   const bins = [0, 0, 0, 0, 0]; R.forEach(r => bins[Math.min(4, Math.floor(r.score10 / 2))]++);
   const mx = Math.max(1, ...bins);
   $('#rp-dist').innerHTML = bins.map((b, i) => `<div class="col" data-tip="${b} student${b === 1 ? '' : 's'} scored ${['0–1.9', '2–3.9', '4–5.9', '6–7.9', '8–10'][i]}"><span class="lab">${b || ''}</span><div class="c" style="height:${(b / mx * 80).toFixed(1)}%"></div></div>`).join('');
-  // per-item stats
   const stat = {}; ITEMS.forEach(it => stat[it.id] = { n: 0, ok: 0, wrong: {} });
   R.forEach(r => r.answers.forEach(a => { const s = stat[a.id]; if (!s) return; s.n++; if (a.ok) s.ok++; else { const k = a.a === '' ? '(no answer)' : a.a; s.wrong[k] = (s.wrong[k] || 0) + 1; } }));
-  const acc = ids => { let n = 0, ok = 0; ids.forEach(id => { n += stat[id].n; ok += stat[id].ok; }); return n ? ok / n * 100 : 0; };
-  $('#rp-groups').innerHTML = Object.keys(GROUPS).map(g => { const ids = ITEMS.filter(it => it.g == g).map(it => it.id); const p = acc(ids); return bar(GROUPS[g], p, n ? Math.round(p) + '%' : '—', p < 60); }).join('');
+  const acc = ids => { let t = 0, ok = 0; ids.forEach(id => { t += stat[id].n; ok += stat[id].ok; }); return t ? ok / t * 100 : 0; };
+  $('#rp-groups').innerHTML = Object.keys(GROUPS).map(g => { const p = acc(ITEMS.filter(it => it.g == g).map(it => it.id)); return bar(GROUPS[g], p, n ? Math.round(p) + '%' : '—', p < 60); }).join('');
   $('#rp-partsacc').innerHTML = PARTS.map(p => { const pc = acc(p.items.map(it => it.id)); return bar(`${p.id} · ${p.title}`, pc, n ? Math.round(pc) + '%' : '—', pc < 60); }).join('');
   renderRank();
-  // mistakes
   const list = ITEMS.map(it => { const s = stat[it.id]; const wrongN = s.n - s.ok; const top = Object.entries(s.wrong).sort((a, b) => b[1] - a[1])[0]; return { it, n: s.n, wrongN, rate: s.n ? wrongN / s.n : 0, top }; })
     .filter(x => x.wrongN > 0).sort((a, b) => b.rate - a.rate || b.wrongN - a.wrongN).slice(0, 12);
   $('#rp-mistakes').innerHTML = !n ? '<div class="empty">No submissions yet.</div>' : !list.length ? '<div class="empty">No mistakes recorded so far.</div>' :
@@ -679,29 +752,92 @@ function renderRank() {
   $$('#rp-rank th').forEach(th => th.classList.toggle('sorted', th.dataset.k === sortKey));
 }
 $$('#rp-rank th').forEach(th => th.addEventListener('click', () => { const k = th.dataset.k; if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = (k === 'score10' || k === 'correct') ? -1 : 1; } renderRank(); }));
-$('#btn-csv').addEventListener('click', () => {
+function downloadCsv(rows, fname) {
   const head = ['Rank', 'Name', 'Class/ID', 'Score /10', 'Correct', 'Total', 'Time (s)', 'Submitted', 'Attempts'].concat(ITEMS.map(it => 'Q' + it.id));
-  const lines = [head].concat(RANK.map(r => { const m = Object.fromEntries(r.answers.map(a => [a.id, a])); return [r.rank, r.name, r.sid || '', r.score10.toFixed(1), r.correct, r.total, r.timeSec, r.submittedAt, r.attempts].concat(ITEMS.map(it => m[it.id] ? (m[it.id].ok ? '1' : '0') : '')); }));
+  const lines = [head].concat(rows.map(r => { const m = Object.fromEntries(r.answers.map(a => [a.id, a])); return [r.rank || '', r.name, r.sid || '', (+r.score10).toFixed(1), r.correct, r.total, r.timeSec, r.submittedAt, r.attempts || 1].concat(ITEMS.map(it => m[it.id] ? (m[it.id].ok ? '1' : '0') : '')); }));
   const csv = '﻿' + lines.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'review-test-1-results.csv'; a.click();
-});
-function unlocked() { return S.status === 'done' || localStorage.getItem(CONFIG.KEY + ':teacher') === CONFIG.TEACHER_PIN || new URLSearchParams(location.search).get('teacher') === CONFIG.TEACHER_PIN; }
-function applyLock() { const u = unlocked(); $('#rp-lock').hidden = u; $('#rp-mistakes').hidden = !u; }
-$('#btn-pin').addEventListener('click', () => { if ($('#pin').value.trim() === CONFIG.TEACHER_PIN) { try { localStorage.setItem(CONFIG.KEY + ':teacher', CONFIG.TEACHER_PIN); } catch (e) {} applyLock(); } else { $('#pin').style.borderColor = 'var(--bad)'; $('#pin').value = ''; } });
-$('#pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-pin').click(); });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = fname; a.click();
+}
+$('#btn-csv').addEventListener('click', () => downloadCsv(RANK, 'review-test-1-ranking.csv'));
+function applyLock() { const u = S.status === 'done' || isStaff(); $('#rp-lock').hidden = u; $('#rp-mistakes').hidden = !u; $('#rank-card').hidden = !(SET.showRanking || isStaff()); }
 
 /* tooltips on chart marks */
 const tip = $('#tip');
 document.addEventListener('mousemove', e => { const c = e.target.closest('[data-tip]'); if (!c) { tip.classList.remove('show'); return; } tip.textContent = c.dataset.tip; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; tip.classList.add('show'); });
 
+/* ====================== TEACHER / ADMIN ====================== */
+function setAuth(a) { A = a; try { a ? sessionStorage.setItem(CONFIG.KEY + ':auth', JSON.stringify(a)) : sessionStorage.removeItem(CONFIG.KEY + ':auth'); } catch (e) {} }
+$('#btn-login').addEventListener('click', async () => {
+  const user = $('#l-name').value.trim(), password = $('#l-pass').value; const err = $('#l-err');
+  err.hidden = true; if (!user || !password) { err.hidden = false; err.lastElementChild.textContent = 'Enter your name and password.'; return; }
+  $('#btn-login').disabled = true;
+  try {
+    const j = await api('login', { user, password });
+    if (!j.ok) throw new Error(j.error || 'Sign-in failed');
+    setAuth({ name: j.name || user, role: j.role || 'teacher', password });
+    if (j.settings) { SET = Object.assign({}, DEFAULT_SET, j.settings); store.set('settings', SET); applySettings(); }
+    $('#l-pass').value = ''; renderTeacher();
+  } catch (e) { err.hidden = false; err.lastElementChild.textContent = 'Sign-in failed: ' + (e.message || 'wrong name or password'); }
+  $('#btn-login').disabled = false;
+});
+$('#l-pass').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-login').click(); });
+$('#btn-signout').addEventListener('click', () => { setAuth(null); renderTeacher(); applyLock(); });
+function renderTeacher() {
+  const on = isStaff(); $('#login-card').hidden = on; $('#teacher-panel').hidden = !on; $('#tab-btn-teacher').textContent = on ? (A.role === 'admin' ? 'Admin' : 'Teacher') : 'Teacher';
+  if (!on) { $('#l-name').value = $('#l-name').value || (CONFIG.LOCAL_USERS[0] || {}).name || ''; return; }
+  $('#t-name').textContent = A.name; $('#t-role').textContent = A.role === 'admin' ? 'Administrator · full access' : 'Teacher · view & export';
+  const adm = isAdmin();
+  $$('#admin-settings input, #admin-settings select, #btn-save-settings').forEach(el => el.disabled = !adm);
+  $('#settings-hint').textContent = adm ? 'Changes apply to every student the next time the page loads or refreshes.' : 'Only the administrator can change settings.';
+  $('#btn-clear-all').hidden = !adm; $('#subs-admin-hint').hidden = !adm;
+  $('#s-open').value = SET.open ? '1' : '0'; $('#s-duration').value = SET.duration; $('#s-pass').value = SET.passMark; $('#s-rank').value = SET.showRanking ? '1' : '0'; $('#s-msg').value = SET.message || '';
+  loadSubs();
+}
+$('#btn-save-settings').addEventListener('click', async () => {
+  const st = $('#s-status'); st.hidden = false; st.className = 'status'; st.lastElementChild.textContent = 'Saving…';
+  const settings = { open: $('#s-open').value === '1', duration: Math.max(5, Math.min(120, +$('#s-duration').value || 20)), passMark: Math.max(0, Math.min(10, +$('#s-pass').value || 5)), showRanking: $('#s-rank').value === '1', message: $('#s-msg').value.trim().slice(0, 200) };
+  try { const j = await api('save_settings', { settings }); if (!j.ok) throw new Error(j.error); SET = Object.assign({}, DEFAULT_SET, j.settings || settings); store.set('settings', SET); applySettings(); st.className = 'status ok'; st.lastElementChild.textContent = 'Saved.'; }
+  catch (e) { st.className = 'status err'; st.lastElementChild.textContent = 'Could not save: ' + (e.message || 'error'); }
+});
+async function loadSubs() {
+  const st = $('#subs-status'); st.textContent = 'Loading…';
+  try {
+    const j = await api('list'); if (!j.ok) throw new Error(j.error);
+    RAW = cleanRows(j.rows || []).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    const tb = $('#subs-tbl tbody'); const adm = isAdmin();
+    tb.innerHTML = RAW.length ? RAW.map((r, i) => `<tr><td>${fmtDate(r.submittedAt)}${r.auto ? ' <span class="att">time up</span>' : ''}</td><td>${esc(r.name)}</td><td>${esc(r.sid || '')}</td><td class="num"><b>${r.score10.toFixed(1)}</b></td><td class="num">${r.correct}/${r.total}</td><td class="num">${mmss(r.timeSec)}</td><td>${adm ? `<button class="btn ghost sm" data-del="${i}">Delete</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="7" class="empty">No submissions yet.</td></tr>';
+    st.textContent = `${RAW.length} attempt${RAW.length === 1 ? '' : 's'}`;
+  } catch (e) { st.textContent = 'Could not load submissions.'; }
+}
+$('#btn-subs-refresh').addEventListener('click', loadSubs);
+$('#btn-subs-csv').addEventListener('click', () => downloadCsv(RAW, 'review-test-1-all-attempts.csv'));
+$('#subs-tbl').addEventListener('click', async e => {
+  const b = e.target.closest('[data-del]'); if (!b) return; const r = RAW[+b.dataset.del]; if (!r) return;
+  const ok = await ask(`Delete the attempt by ${r.name} (${r.score10.toFixed(1)}/10, ${fmtDate(r.submittedAt)})? This cannot be undone.`, 'Delete'); if (!ok) return;
+  const j = await api('delete', { clientId: r.clientId, submittedAt: r.submittedAt }); if (!j.ok) { alert('Could not delete: ' + (j.error || 'error')); return; }
+  loadSubs();
+});
+$('#btn-clear-all').addEventListener('click', async () => {
+  const ok = await ask('Delete ALL results for this test? Every student will be able to take it again. This cannot be undone.', 'Delete all'); if (!ok) return;
+  const j = await api('clear'); if (!j.ok) { alert('Could not delete: ' + (j.error || 'error')); return; }
+  loadSubs();
+});
+
 /* ====================== BOOT ====================== */
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.pending && CONFIG.API_URL) send(); });
+applySettings(); refreshSettings();
 if (S.status === 'running') {
-  if (Date.now() - S.startedAt >= CONFIG.DURATION_MIN * 60 * 1000) { renderQuiz(); submit(true); }
-  else { renderQuiz(); startTimer(); }
+  renderQuiz();
+  if (Date.now() - S.startedAt >= durationSec() * 1000) submit(true); else startTimer();
 } else if (S.status === 'done') {
-  renderResults(); lockTest(); if (S.pending) send(); else { const st = $('#r-status'); st.className = 'status ok'; st.innerHTML = '<span class="dot"></span><span>' + (CONFIG.API_URL ? 'Saved to the class sheet.' : 'Saved on this device.') + '</span>'; }
+  renderResults(); lockTest();
+  if (S.pending) send(); else {
+    const st = $('#r-status'); st.className = 'status ok'; st.innerHTML = '<span class="dot"></span><span>' + (CONFIG.API_URL ? 'Saved to the class sheet.' : 'Saved on this device.') + '</span>';
+    // the teacher may have cleared this attempt → allow a new one
+    api('list').then(j => { if (j.ok && Array.isArray(j.rows) && !j.rows.some(r => r.clientId === S.clientId)) { resetForRetake(); showTab('test'); } }).catch(() => {});
+  }
 } else { $('#f-name').value = S.name || ''; $('#f-sid').value = S.sid || ''; }
+if (isStaff()) renderTeacher();
 })();
 </script>
 </body>
