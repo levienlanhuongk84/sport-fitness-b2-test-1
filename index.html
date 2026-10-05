@@ -184,6 +184,13 @@
   .modal-box { background: var(--surface); border-radius: 14px; padding: 22px 22px 18px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
   .modal-box p { margin: 0 0 16px; font-size: 16px; color: var(--ink); }
   .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+  /* password field: Show/Hide + Remember me */
+  .login-form { max-width: 520px; }
+  .pw-row { display: flex; flex-wrap: nowrap; gap: 8px; align-items: stretch; }
+  .pw-row input { flex: 1 1 auto; min-width: 0; }
+  .pw-row .btn { flex: 0 0 auto; }
+  label.remember { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+  label.remember input { width: auto; margin: 0; accent-color: var(--orange); }
   @media print { nav.tabs, .testbar, .btn { display: none !important; } }
 
   /* ===== LH Master Hero — background art taken from the approved mock (logo, glow, ribbons fixed); only eyebrow / title / 3 chips change.
@@ -355,12 +362,13 @@
     <div class="card" id="login-card">
       <h2>Teacher sign-in</h2>
       <p class="sub">Teachers can see the full class report and export results. The administrator can also open or close the test, change settings and manage submissions.</p>
-      <div class="two">
+      <div class="login-form">
         <div class="field"><label for="l-name">Name</label><input id="l-name" autocomplete="username" placeholder="Teacher name"></div>
-        <div class="field"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="l-pass">Password</label><div class="pw-row"><input id="l-pass" type="password" autocomplete="current-password"><button class="btn ghost" id="btn-pw-toggle" type="button" aria-controls="l-pass">Show</button></div></div>
+        <label class="remember"><input type="checkbox" id="l-remember"> Remember me on this device</label>
+        <div class="status err" id="l-err" hidden><span class="dot"></span><span></span></div>
+        <p style="margin:10px 0 0"><button class="btn" id="btn-login">Sign in</button></p>
       </div>
-      <div class="status err" id="l-err" hidden><span class="dot"></span><span></span></div>
-      <p style="margin:10px 0 0"><button class="btn" id="btn-login">Sign in</button></p>
     </div>
     <div id="teacher-panel" hidden>
       <div class="card"><div class="toolbar" style="margin:0"><div><b id="t-name"></b> <span class="chip or" id="t-role"></span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" href="#" data-go="report" style="text-decoration:none;display:inline-block">Class report</a><button class="btn ghost sm" id="btn-signout">Sign out</button></div></div></div>
@@ -802,6 +810,10 @@ document.addEventListener('mousemove', e => { const c = e.target.closest('[data-
 
 /* ====================== TEACHER / ADMIN ====================== */
 function setAuth(a) { A = a; try { a ? sessionStorage.setItem(CONFIG.KEY + ':auth', JSON.stringify(a)) : sessionStorage.removeItem(CONFIG.KEY + ':auth'); } catch (e) {} }
+/* remember me on this device — cùng khóa/định dạng với trang luyện Task 1 và các mock test: <KEY>:remember = {user, password} */
+(function () { const r = store.get('remember', null); if (r && r.user && r.password) { $('#l-name').value = r.user; $('#l-pass').value = r.password; $('#l-remember').checked = true; } })();
+$('#btn-pw-toggle').addEventListener('click', () => { const i = $('#l-pass'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#btn-pw-toggle').textContent = show ? 'Hide' : 'Show'; });
+$('#l-remember').addEventListener('change', () => { if (!$('#l-remember').checked) store.del('remember'); });
 $('#btn-login').addEventListener('click', async () => {
   const user = $('#l-name').value.trim(), password = $('#l-pass').value; const err = $('#l-err');
   err.hidden = true; if (!user || !password) { err.hidden = false; err.lastElementChild.textContent = 'Enter your name and password.'; return; }
@@ -811,7 +823,9 @@ $('#btn-login').addEventListener('click', async () => {
     if (!j.ok) throw new Error(j.error || 'Sign-in failed');
     setAuth({ name: j.name || user, role: j.role || 'teacher', password });
     if (j.settings) { SET = Object.assign({}, DEFAULT_SET, j.settings); store.set('settings', SET); applySettings(); }
-    $('#l-pass').value = ''; renderTeacher();
+    if ($('#l-remember').checked) store.set('remember', { user, password }); else { store.del('remember'); $('#l-pass').value = ''; }
+    $('#l-pass').type = 'password'; $('#btn-pw-toggle').textContent = 'Show';
+    renderTeacher();
   } catch (e) { err.hidden = false; err.lastElementChild.textContent = 'Sign-in failed: ' + (e.message || 'wrong name or password'); }
   $('#btn-login').disabled = false;
 });
