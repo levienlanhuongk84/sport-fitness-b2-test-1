@@ -702,17 +702,27 @@ function resetForRetake() {
   $('#f-name').value = S.name || ''; $('#f-sid').value = S.sid || '';
 }
 
+// Gửi bài lên Sheet; lỗi (vd cả lớp tự nộp cùng giây khi hết giờ) → tự gửi lại tối đa 6 lần, cách nhau ngẫu nhiên tăng dần.
+let sending = false, sendTries = 0, sendTimer = null;
 async function send() {
-  const st = $('#r-status'); const r = S.pending; if (!r) return;
-  st.className = 'status'; st.innerHTML = '<span class="dot"></span><span>Saving to the class sheet…</span>';
+  const st = $('#r-status'); const r = S.pending; if (!r || sending) return;
+  sending = true; clearTimeout(sendTimer);
+  st.className = 'status'; st.innerHTML = '<span class="dot"></span><span>' + (sendTries ? 'Still saving to the class sheet… (try ' + (sendTries + 1) + ')' : 'Saving to the class sheet…') + '</span>';
   try {
     const j = await api('submit', r); if (!j.ok) throw new Error(j.error || 'rejected');
-    S.pending = null; save(); st.className = 'status ok';
+    S.pending = null; save(); sendTries = 0; st.className = 'status ok';
     st.innerHTML = '<span class="dot"></span><span>' + (CONFIG.API_URL ? 'Saved to the class sheet. See the <a href="#" data-go="report">class report</a>.' : 'Saved on this device. The class sheet is not connected yet.') + '</span>';
   } catch (e) {
-    st.className = 'status err'; st.innerHTML = '<span class="dot"></span><span>Could not reach the class sheet — your result is kept on this device and will be sent when you reopen this page. </span><button class="btn ghost sm" id="btn-retry">Retry now</button>';
-    $('#btn-retry').addEventListener('click', send);
-  }
+    sendTries++;
+    if (CONFIG.API_URL && sendTries <= 6) {
+      const wait = Math.round(3000 + Math.random() * 7000 * sendTries);
+      st.className = 'status'; st.innerHTML = '<span class="dot"></span><span>The class sheet is busy — your result is safe on this device and will be sent again automatically in a few seconds…</span>';
+      sendTimer = setTimeout(send, wait);
+    } else {
+      st.className = 'status err'; st.innerHTML = '<span class="dot"></span><span>Could not reach the class sheet — your result is kept on this device and will be sent when you reopen this page. </span><button class="btn ghost sm" id="btn-retry">Retry now</button>';
+      $('#btn-retry').addEventListener('click', () => { sendTries = 0; send(); });
+    }
+  } finally { sending = false; }
 }
 
 /* ====================== RESULTS ====================== */
