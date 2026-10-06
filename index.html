@@ -258,7 +258,7 @@
       <p class="sub">Enter your name exactly as on the class list. The timer starts when you press <b>Start</b>; the test submits itself when time is up.</p>
       <div class="two">
         <div class="field"><label for="f-name">Full name</label><input id="f-name" autocomplete="name" placeholder="e.g. Nguyen Van A" maxlength="80"></div>
-        <div class="field"><label for="f-sid">Class / ID (optional)</label><select id="f-sid" class="sel lh-class" aria-label="Class"><option value="">— Choose your class —</option><option>CK1-51</option><option>CH-35</option></select>
+        <div class="field"><label for="f-sid">Class / ID <span style="color:var(--bad)">*</span></label><select id="f-sid" class="sel lh-class" aria-label="Class"><option value="">— Choose your class —</option><option>CK1-51</option><option>CH-35</option></select>
 <script>
 /* LH class picker (2026-10-06): the class is CHOSEN from the list kept in the "Danh sách lớp" tab of "Sổ bài nộp SĐH 2026"
    (served by its web app), so every page records the same codes. Falls back to the list above when offline.
@@ -628,9 +628,11 @@ async function refreshSettings() {
 /* ====================== START ====================== */
 $('#map-body').innerHTML = PARTS.map(p => `<tr><td>${p.id}</td><td>${esc(p.title)}</td><td>${esc(p.focus)}</td><td>${p.items.length}</td></tr>`).join('');
 $('#m-count').textContent = TOTAL + ' questions'; $('#total').textContent = TOTAL;
+$('#f-sid').addEventListener('change', e => e.target.style.borderColor = '');
 $('#btn-start').addEventListener('click', async () => {
   const name = $('#f-name').value.trim(), sid = $('#f-sid').value.trim();
   if (name.length < 2) { $('#f-name').focus(); $('#f-name').style.borderColor = 'var(--bad)'; return; }
+  if (!sid) { $('#f-sid').focus(); $('#f-sid').style.borderColor = 'var(--bad)'; return; }   // class is required (2026-10-06)
   await refreshSettings();
   if (!SET.open) return;
   S = Object.assign(S, { status: 'running', name, sid, startedAt: Date.now(), duration: SET.duration, answers: {}, order: {}, result: null });
