@@ -228,6 +228,20 @@
   }
   /* end lh-hero */
   nav.tabs button.on { color: #5B2A8C; border-bottom-color: #8E4FD6; }
+  /* phones: bigger answer boxes (16 px stops iPhone zooming on each tap), all tabs visible, report without sideways swiping */
+  @media (max-width: 760px) { select.gap { font-size: 16px; min-height: 40px; padding: 7px 8px; } }
+  @media (max-width: 480px) { nav.tabs button { padding: 14px 9px 12px; font-size: 13px; letter-spacing: .02em; } }
+  @media (max-width: 600px) {
+    #rp-rank { min-width: 0; }
+    #rp-rank th:nth-child(3), #rp-rank td:nth-child(3), #rp-rank th:nth-child(7), #rp-rank td:nth-child(7) { display: none; }
+    #rp-mistakes table.tbl { min-width: 0; }
+    #rp-mistakes thead { display: none; }
+    #rp-mistakes tr { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); }
+    #rp-mistakes td { border: 0; padding: 0; }
+    #rp-mistakes td:nth-child(n+4) { grid-column: 2 / -1; }
+    #rp-mistakes td:nth-child(4)::before { content: "Most common wrong answer: "; font-size: 12px; color: var(--muted); }
+    #rp-mistakes td:nth-child(5)::before { content: "Correct answer: "; font-size: 12px; color: var(--muted); }
+  }
 </style>
 </head>
 <body>
@@ -570,6 +584,11 @@ function optionOrder(it) {
 }
 
 /* ====================== API (server or this device) ====================== */
+async function fetchJson(url, opts, ms) {
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+  try { const res = await fetch(url, Object.assign({}, opts, { signal: c.signal })); return await res.json(); }
+  finally { clearTimeout(t); }
+}
 async function api(action, payload) {
   payload = payload || {};
   if (!CONFIG.API_URL) return localApi(action, payload);
@@ -580,18 +599,16 @@ async function api(action, payload) {
     // tăng dần (load test 110 HV, 22/10/2026).
     for (let t = 0; ; t++) {
       try {
-        const res = await fetch(CONFIG.API_URL + '?action=' + action + '&_=' + Date.now(), { redirect: 'follow' });
-        const j = await res.json();
-        if (j.ok === false && t < 3) throw new Error(j.error || 'busy');
+        const j = await fetchJson(CONFIG.API_URL + '?action=' + action + '&_=' + Date.now(), { redirect: 'follow' }, 15000);
+        if (j.ok === false && t < 5) throw new Error(j.error || 'busy');
         return j;
       } catch (e) {
-        if (t >= 3) throw e;
+        if (t >= 5) throw e;
         await new Promise(r => setTimeout(r, 800 + Math.random() * 1500 * (t + 1)));
       }
     }
   }
-  const res = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(Object.assign({ action }, payload, auth)), redirect: 'follow' });
-  return res.json();
+  return fetchJson(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(Object.assign({ action }, payload, auth)), redirect: 'follow' }, 40000);
 }
 function localApi(action, p) {
   const rows = store.get('local', []);
@@ -642,10 +659,12 @@ $('#btn-start').addEventListener('click', async () => {
   const name = $('#f-name').value.trim(), sid = $('#f-sid').value.trim();
   if (name.length < 2) { $('#f-name').focus(); $('#f-name').style.borderColor = 'var(--bad)'; return; }
   if (!sid) { $('#f-sid').focus(); $('#f-sid').style.borderColor = 'var(--bad)'; return; }   // class is required (2026-10-06)
-  await refreshSettings();
-  if (!SET.open) return;
+  const btn = $('#btn-start'), btnText = btn.textContent; btn.disabled = true; btn.textContent = 'Starting…';
+  await Promise.race([refreshSettings(), new Promise(r => setTimeout(r, 3000))]);
+  btn.textContent = btnText; btn.disabled = false;
+  if (!SET.open) { applySettings(); return; }
   S = Object.assign(S, { status: 'running', name, sid, startedAt: Date.now(), duration: SET.duration, answers: {}, order: {}, result: null });
-  save(); renderQuiz(); startTimer();
+  save(); renderQuiz(); startTimer(); window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 });
 
 /* ====================== RENDER TEST ====================== */
@@ -756,7 +775,7 @@ async function send() {
   } catch (e) {
     sendTries++;
     if (CONFIG.API_URL && sendTries <= 6) {
-      const wait = Math.round(3000 + Math.random() * 7000 * sendTries);
+      const wait = Math.round(1500 + Math.random() * 3000 * sendTries);
       st.className = 'status'; st.innerHTML = '<span class="dot"></span><span>The class sheet is busy — your result is safe on this device and will be sent again automatically in a few seconds…</span>';
       sendTimer = setTimeout(send, wait);
     } else {
